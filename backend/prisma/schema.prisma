@@ -26,7 +26,8 @@ model Link{
   originalUrl String
   shortUrl String
   encrypt Boolean @default(false)
-  owner User @relation(fields: [linkId],references: [id])
+  belongsToOwner Int
+  owner User @relation(fields: [belongsToOwner],references: [id])
   stats LinkStatistics?
 }
 
