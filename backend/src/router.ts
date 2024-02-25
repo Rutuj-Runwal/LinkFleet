@@ -99,4 +99,37 @@ router.post('/updateShortLink',checkShortLinkAvailability, async (req,res) => {
     }
 });
 
+router.post('/deleteShortLink', async (req,res) => {
+    const id:number = req.body.linkId;
+    // Check if user has access to domain
+    try{
+        const data = await prisma.link.findFirst({
+            where:{
+                linkId:id,
+                //@ts-ignore
+                belongsToOwner:req.user.id
+            }
+        });
+        if(data!.linkId){
+            // Remove statistics
+            const stats = await prisma.linkStatistics.delete({
+                where:{
+                    belongsToLink:id
+                }
+            });
+        
+            const delItem = await prisma.link.delete({
+                where:{
+                    linkId:id,
+                    //@ts-ignore
+                    belongsToOwner:req.user.id
+                }
+            });
+            res.send({msg:'Deletion Successful!',data:stats})
+        }
+    }catch{
+        res.status(404).send({msg:'Not Authorized!'});
+    }
+})
+
 export default router;
