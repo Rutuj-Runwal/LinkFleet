@@ -26,6 +26,7 @@ model Link{
   originalUrl String
   shortUrl String
   encrypt Boolean @default(false)
+  trackStats Boolean @default(false)
   belongsToOwner Int
   owner User @relation(fields: [belongsToOwner],references: [id])
   stats LinkStatistics?
@@ -35,5 +36,6 @@ model LinkStatistics{
   statId Int @id @unique @default(autoincrement())
   visits  DateTime[] 
   region String[]
-  link Link @relation(fields: [statId],references: [linkId])
+  belongsToLink Int @unique
+  link Link @relation(fields: [belongsToLink],references: [linkId])
 }

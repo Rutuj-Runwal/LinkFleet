@@ -1,17 +1,57 @@
-import { Router } from "express";
+import { NextFunction, Request, Response,Router } from "express";
 import prisma from "./db";
 
 const router = Router();
 
-router.post('/generateShortLink',async (req,res) => {
+const checkShortLinkAvailability = async (req:Request,res:Response,next:NextFunction)  => {
+    const shortToCheck:string = req.body.short;
+    const url:string = req.body.url;
+    const iDToUpdateOn:number = req.body.linkId;
+    try{
+        const check = await prisma.link.findFirstOrThrow({
+            where:{
+                shortUrl:shortToCheck
+            }
+        });
+        if(check.linkId===iDToUpdateOn && check.originalUrl!=url){
+            // If the user is only changing the original url.
+            // Allow the change.
+            next();
+        }else{
+            if(!check.encrypt){
+                res.status(301).send({msg:'ShortLink already in use.',data:{url:check.originalUrl,shorthand:check.shortUrl}});
+            }else{
+                res.status(301).send({msg:'Shortlink already in use.Pick a different name'});
+            }
+            return;
+        }
+    }catch{
+        // ShortLink is available to register or update
+        next();
+    }      
+}
+
+router.post('/generateShortLink',checkShortLinkAvailability,async (req,res) => {
     const url:string = req.body.url;
     const short:string = req.body.short;
-    //@ts-ignore
-    console.log(req.user); // TODO: Add types for extending express request object!
+
     if(url){
         //@ts-ignore
         const data = await prisma.link.create({data:{originalUrl:url,shortUrl:short,belongsToOwner:req.user.id}});
-        console.log(data);
+
+        // Intialize empty statistics
+        await prisma.linkStatistics.create({
+            data:{
+                belongsToLink:data.linkId,
+                region:{
+                    set:[]
+                },
+                visits:{
+                    set:[]
+                }
+            }
+        });
+
         res.send(data);
     }
     return;
@@ -31,10 +71,13 @@ router.get('/getAllLinks',async (req,res)=>{
     return;
 });
 
-router.post('/updateShortLink', async (req,res) => {
+router.post('/updateShortLink',checkShortLinkAvailability, async (req,res) => {
     const updatedUrl:string = req.body.url;
     const updatedShort:string = req.body.short;
     const id:number = req.body.linkId;
+    const trackStatState:boolean = req.body.trackStats;
+    const encryptState:boolean = req.body.encryptState;
+
     try{
         const updates = await prisma.link.update({
             where:{
@@ -44,13 +87,15 @@ router.post('/updateShortLink', async (req,res) => {
             },
             data:{
                 originalUrl:updatedUrl,
-                shortUrl:updatedShort
+                shortUrl:updatedShort,
+                trackStats:trackStatState,
+                encrypt:encryptState
             }
         });
         res.send(updates);
     }catch{
         //@ts-ignore
-        res.send({msg:`Not found for ${req.user.name}`})
+        res.send({msg:`Url not under ${req.user.name}'s administration`})
     }
 });
 
