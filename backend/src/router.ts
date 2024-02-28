@@ -34,10 +34,12 @@ const checkShortLinkAvailability = async (req:Request,res:Response,next:NextFunc
 router.post('/generateShortLink',checkShortLinkAvailability,async (req,res) => {
     const url:string = req.body.url;
     const short:string = req.body.short;
+    const encryptState:boolean = req.body.encryptState;
+    const encryptionPass:boolean = req.body.encryptionPass || "";
 
     if(url){
         //@ts-ignore
-        const data = await prisma.link.create({data:{originalUrl:url,shortUrl:short,belongsToOwner:req.user.id}});
+        const data = await prisma.link.create({data:{originalUrl:url,shortUrl:short,belongsToOwner:req.user.id,encrypt:encryptState?true:false,encPassword: encryptionPass }});
 
         // Intialize empty statistics
         await prisma.linkStatistics.create({
@@ -77,6 +79,7 @@ router.post('/updateShortLink',checkShortLinkAvailability, async (req,res) => {
     const id:number = req.body.linkId;
     const trackStatState:boolean = req.body.trackStats;
     const encryptState:boolean = req.body.encryptState;
+    const encryptionPass:string = req.body.encryptionPass;
 
     try{
         const updates = await prisma.link.update({
@@ -89,7 +92,8 @@ router.post('/updateShortLink',checkShortLinkAvailability, async (req,res) => {
                 originalUrl:updatedUrl,
                 shortUrl:updatedShort,
                 trackStats:trackStatState,
-                encrypt:encryptState
+                encrypt:encryptState,
+                encPassword:encryptionPass
             }
         });
         res.send(updates);
