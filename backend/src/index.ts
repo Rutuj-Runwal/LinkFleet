@@ -2,7 +2,6 @@
 import express,{Request,Response} from "express";
 import router from "./router";
 import * as dotenv from "dotenv";
-import ejs from 'ejs';
 import { protect } from "./modules/auth";
 import { createUser, signInUser } from "./modules/user";
 import prisma from "./db";

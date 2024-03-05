@@ -42,17 +42,24 @@ router.post('/generateShortLink',checkShortLinkAvailability,async (req,res) => {
         const data = await prisma.link.create({data:{originalUrl:url,shortUrl:short,belongsToOwner:req.user.id,encrypt:encryptState?true:false,encPassword: encryptionPass }});
 
         // Intialize empty statistics
-        await prisma.linkStatistics.create({
-            data:{
-                belongsToLink:data.linkId,
-                region:{
-                    set:[]
-                },
-                visits:{
-                    set:[]
+        try{
+            await prisma.linkStatistics.create({
+                data:{
+                    belongsToLink:data.linkId,
+                    region:{
+                        set:[]
+                    },
+                    visits:{
+                        set:[]
+                    }
                 }
+            });
+        }catch(e){
+            //@ts-ignore
+            if(e.code==='P2002'){
+                res.status(404).send({msg:`Url ${url} already exists with `});
             }
-        });
+        }
 
         res.send(data);
     }

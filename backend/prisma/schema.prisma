@@ -23,14 +23,15 @@ model User{
 
 model Link{
   linkId Int @id @default(autoincrement())
-  originalUrl String
+  originalUrl String 
   shortUrl String
   encrypt Boolean @default(false)
   encPassword String @default("")
   trackStats Boolean @default(false)
-  belongsToOwner Int
+  belongsToOwner Int 
   owner User @relation(fields: [belongsToOwner],references: [id])
   stats LinkStatistics?
+  @@unique(name: "unique_url",fields:[originalUrl,belongsToOwner])
 }
 
 model LinkStatistics{
