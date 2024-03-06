@@ -8,16 +8,26 @@ export const createUser = async (req:any,res:any) => {
 
     // TODO: Vaildate all the data
 
+    try{
+        // Store the data into db
+        const user = await prisma.user.create({data:{name:name,email:email,password:password}});
 
-    // Store the data into db
-    const user = await prisma.user.create({data:{name:name,email:email,password:password}});
-
-    // Generate a JWT
-    const token = createJWT(user);
-    // TODO: Set token in localstorage via frontend
-    console.log(token);
-    res.status(200).json({ token: token });
-    return;
+        // Generate a JWT
+        const token = createJWT(user);
+        // TODO: Set token in localstorage via frontend
+        console.log(token);
+        res.status(200).json({ token: token });
+        return;
+    }catch(e){
+        // @ts-ignore
+        if(e.code==='P2002'){
+            // @ts-ignore
+            res.status(401).send({msg:`${e.meta.target} is already in use.`});
+        }else{
+            res.status(401).send({msg:e});
+        }
+    }
+    
 }
 
 export const signInUser = async (req:any,res:any) => {

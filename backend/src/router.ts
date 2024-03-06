@@ -38,11 +38,11 @@ router.post('/generateShortLink',checkShortLinkAvailability,async (req,res) => {
     const encryptionPass:boolean = req.body.encryptionPass || "";
 
     if(url){
-        //@ts-ignore
-        const data = await prisma.link.create({data:{originalUrl:url,shortUrl:short,belongsToOwner:req.user.id,encrypt:encryptState?true:false,encPassword: encryptionPass }});
-
-        // Intialize empty statistics
         try{
+            //@ts-ignore
+            const data = await prisma.link.create({data:{originalUrl:url,shortUrl:short,belongsToOwner:req.user.id,encrypt:encryptState?true:false,encPassword: encryptionPass }});
+
+            // Intialize empty statistics
             await prisma.linkStatistics.create({
                 data:{
                     belongsToLink:data.linkId,
@@ -54,14 +54,13 @@ router.post('/generateShortLink',checkShortLinkAvailability,async (req,res) => {
                     }
                 }
             });
+            res.send(data);
         }catch(e){
             //@ts-ignore
             if(e.code==='P2002'){
                 res.status(404).send({msg:`Url ${url} already exists with `});
             }
         }
-
-        res.send(data);
     }
     return;
 });

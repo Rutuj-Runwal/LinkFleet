@@ -4,6 +4,8 @@ import router from "./router";
 import * as dotenv from "dotenv";
 import { protect } from "./modules/auth";
 import { createUser, signInUser } from "./modules/user";
+import UAParser from 'ua-parser-js';
+
 import prisma from "./db";
 dotenv.config();
 
@@ -39,6 +41,9 @@ app.get('/:link',async (req,res) => {
             if(!password){
                 if(redirectionData.trackStats){
                     const dt = new Date();
+                    const parser = new UAParser('user-agent');
+                    const locResult = parser.getResult();
+
                     await prisma.linkStatistics.update({
                         where:{
                             belongsToLink:redirectionData.linkId,
@@ -46,6 +51,9 @@ app.get('/:link',async (req,res) => {
                         data:{
                             visits:{
                                 push:[dt.toISOString()]
+                            },
+                            region:{
+                                push:[locResult.toString()]
                             }
                         }
                     });
