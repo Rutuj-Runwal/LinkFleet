@@ -31,6 +31,37 @@ const checkShortLinkAvailability = async (req:Request,res:Response,next:NextFunc
     }      
 }
 
+const checkShortLinkAvailabilityWithUpdates = async (req:Request,res:Response,next:NextFunction)  => {
+    const shortToCheck:string = req.body.short;
+    const url:string = req.body.url;
+    const iDToUpdateOn:number = req.body.linkId;
+    const trackStatState:boolean = req.body.trackStats;
+    const encryptState:boolean = req.body.encryptState;
+    const encryptionPass:string = req.body.encryptionPass;
+    try{
+        const check = await prisma.link.findFirstOrThrow({
+            where:{
+                shortUrl:shortToCheck
+            }
+        });
+        if(check.linkId===iDToUpdateOn && (check.originalUrl!=url || check.encrypt!=encryptState || check.encPassword!=encryptionPass || check.trackStats!=trackStatState)){
+            // If the user is changing any parameter other than shorturl(shorturl needs to be unique).
+            // Allow the change.
+            next();
+        }else{
+            if(!check.encrypt){
+                res.status(301).send({msg:'ShortLink already in use.',data:{url:check.originalUrl,shorthand:check.shortUrl}});
+            }else{
+                res.status(301).send({msg:'Shortlink already in use.Pick a different name'});
+            }
+            return;
+        }
+    }catch{
+        // ShortLink is available to register or update
+        next();
+    }      
+}
+
 router.post('/generateShortLink',checkShortLinkAvailability,async (req,res) => {
     const url:string = req.body.url;
     const short:string = req.body.short;
@@ -79,13 +110,20 @@ router.get('/getAllLinks',async (req,res)=>{
     return;
 });
 
-router.post('/updateShortLink',checkShortLinkAvailability, async (req,res) => {
+router.post('/updateShortLink',checkShortLinkAvailabilityWithUpdates, async (req,res) => {
     const updatedUrl:string = req.body.url;
     const updatedShort:string = req.body.short;
     const id:number = req.body.linkId;
     const trackStatState:boolean = req.body.trackStats;
     const encryptState:boolean = req.body.encryptState;
     const encryptionPass:string = req.body.encryptionPass;
+
+    if(encryptState){
+        if(encryptionPass===undefined){
+            res.status(303).send({msg:'Encryption Passport undefined.'});
+            return;
+        }
+    }
 
     try{
         const updates = await prisma.link.update({
@@ -99,11 +137,12 @@ router.post('/updateShortLink',checkShortLinkAvailability, async (req,res) => {
                 shortUrl:updatedShort,
                 trackStats:trackStatState,
                 encrypt:encryptState,
-                encPassword:encryptionPass
+                encPassword:encryptState===true? encryptionPass : undefined
             }
         });
         res.send(updates);
-    }catch{
+    }catch(e){
+        console.log(e);
         //@ts-ignore
         res.send({msg:`Url not under ${req.user.name}'s administration`})
     }

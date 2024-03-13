@@ -41,10 +41,17 @@ app.get('/:link',async (req,res) => {
             if(!password){
                 if(redirectionData.trackStats){
                     const dt = new Date();
+
                     const user_agent = req.headers['user-agent'];
                     const parser = new UAParser(user_agent);
                     const locResult = parser.getResult();
-                    console.log(locResult);
+
+                    let regionStat = locResult.ua; // Likely an automated request using curl, postman or thuderclient
+                    if(locResult.browser.name){
+                        // Browser based Request
+                        regionStat = locResult.os.name + ' ' + locResult.browser.name + ' ' + locResult.browser.version;
+                    }
+
                     await prisma.linkStatistics.update({
                         where:{
                             belongsToLink:redirectionData.linkId,
@@ -54,7 +61,7 @@ app.get('/:link',async (req,res) => {
                                 push:[dt.toISOString()]
                             },
                             region:{
-                                push:[locResult.os.name + ' ' + locResult.browser.name + ' ' + locResult.browser.version]
+                                push:[regionStat]
                             }
                         }
                     });
